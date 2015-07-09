@@ -1,0 +1,38 @@
+{
+    "name": "twistor/flysystem-http",
+    "description": "An HTTP adapter for Flysystem.",
+    "keywords": [
+        "league",
+        "twistor/flysystem-http"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/twistor/flysystem-http",
+    "authors": [
+        {
+            "name": "Chris Leppanen",
+            "email": "chris.leppanen@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "league/flysystem": "~1.0",
+        "guzzlehttp/guzzle": "~5.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~4.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "League\\Flysystem\\Http\\": "src/"
+        }
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    }
+}
