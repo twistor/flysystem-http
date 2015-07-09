@@ -36,9 +36,9 @@ class HttpAdapter implements AdapterInterface
     protected $visibility = AdapterInterface::VISIBILITY_PUBLIC;
 
     /**
-     * Constructs an Http object,
+     * Constructs an Http object.
      *
-     * @param string $base The base URL.
+     * @param string                      $base   The base URL.
      * @param \GuzzleHttp\ClientInterface $client An optional Guzzle client.
      */
     public function __construct($base, ClientInterface $client = null)
@@ -205,8 +205,7 @@ class HttpAdapter implements AdapterInterface
     {
         try {
             $stream = $this->getClient()->get($this->base . '/' . $path)->getBody()->detach();
-        }
-        catch (ClientException $e) {
+        } catch (ClientException $e) {
             return false;
         }
 
