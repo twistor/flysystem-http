@@ -100,7 +100,7 @@ class HttpAdapter implements AdapterInterface
      */
     public function getMetadata($path)
     {
-        $response = $this->head($this->base . '/' . $path);
+        $response = $this->client->head($this->base . '/' . $path);
 
         if ($mimetype = $response->getHeader('Content-Type')) {
             $mimetype = trim(explode(';', $mimetype, 2));
