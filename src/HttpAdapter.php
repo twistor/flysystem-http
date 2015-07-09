@@ -50,7 +50,6 @@ class HttpAdapter implements AdapterInterface
 
         if (isset($parsed['user'])) {
             $this->visibility = AdapterInterface::VISIBILITY_PRIVATE;
-
             $this->base .= $parsed['user'];
 
             if (isset($parsed['pass']) && $parsed['pass'] !== '') {
@@ -103,7 +102,8 @@ class HttpAdapter implements AdapterInterface
         $response = $this->client->head($this->base . '/' . $path);
 
         if ($mimetype = $response->getHeader('Content-Type')) {
-            $mimetype = trim(explode(';', $mimetype, 2));
+            list($mimetype) = explode(';', $mimetype, 2);
+            $mimetype = trim($mimetype);
         } else {
             // Remove any query strings or fragments.
             list($path) = explode('#', $path, 2);
