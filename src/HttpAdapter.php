@@ -100,7 +100,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return string The base path.
      */
-    public function getBase() {
+    public function getBase()
+    {
         return $this->base;
     }
 
@@ -207,7 +208,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @param array $context The context options.
      */
-    public function setContext(array $context) {
+    public function setContext(array $context)
+    {
         $this->context = $context;
     }
 
@@ -258,7 +260,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return string
      */
-    protected function buildUrl($path) {
+    protected function buildUrl($path)
+    {
         $path = str_replace('%2F', '/', rawurlencode($path));
 
         return rtrim($this->base, '/') . '/' . $path;
@@ -269,7 +272,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return resource
      */
-    protected function getContext() {
+    protected function getContext()
+    {
         $context = stream_context_get_default();
 
         stream_context_set_option($context, $this->context);
@@ -284,7 +288,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return string|false
      */
-    protected function get($path) {
+    protected function get($path)
+    {
         return file_get_contents($this->buildUrl($path), false, $this->getContext());
     }
 
@@ -295,7 +300,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return resource|false
      */
-    protected function getStream($path) {
+    protected function getStream($path)
+    {
         return fopen($this->buildUrl($path), 'rb', false, $this->getContext());
     }
 
@@ -306,7 +312,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return array|false
      */
-    protected function head($path) {
+    protected function head($path)
+    {
         $default_context = stream_context_get_default();
 
         $options = stream_context_get_options($default_context);
@@ -342,7 +349,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return array
      */
-    protected function parseMetadata($path, array $headers) {
+    protected function parseMetadata($path, array $headers)
+    {
         $metadata = [
             'path' => $path,
             'visibility' => $this->visibility,
@@ -372,7 +380,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @return string
      */
-    protected function parseMimeType($path, array $headers) {
+    protected function parseMimeType($path, array $headers)
+    {
         if (isset($headers['content-type'])) {
             list($mimetype) = explode(';', $headers['content-type'], 2);
 
