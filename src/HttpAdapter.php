@@ -1,16 +1,13 @@
 <?php
 
-namespace League\Flysystem\Http;
+namespace Twistor\Flysystem\Http;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\ClientException;
 use League\Flysystem\AdapterInterface;
 use League\Flysystem\Config;
 use League\Flysystem\Util\MimeType;
 
 /**
- * Uses Guzzle as a backend for HTTP URLs.
+ * Provides an adapter using PHP native HTTP functions.
  */
 class HttpAdapter implements AdapterInterface
 {
@@ -22,11 +19,14 @@ class HttpAdapter implements AdapterInterface
     protected $base;
 
     /**
-     * The Guzzle HTTP client.
-     *
-     * @var \GuzzleHttp\ClientInterface
+     * @var array
      */
-    protected $client;
+    protected $context;
+
+    /**
+     * @var bool
+     */
+    protected $supportsHead;
 
     /**
      * The visibility of this adapter.
@@ -36,30 +36,31 @@ class HttpAdapter implements AdapterInterface
     protected $visibility = AdapterInterface::VISIBILITY_PUBLIC;
 
     /**
-     * Constructs an Http object.
+     * Constructs an HttpAdapter object.
      *
-     * @param string                      $base   The base URL.
-     * @param \GuzzleHttp\ClientInterface $client An optional Guzzle client.
+     * @param string $base   The base URL.
+     * @param bool   $supportsHead
+     * @param array  $context
      */
-    public function __construct($base, ClientInterface $client = null)
+    public function __construct($base, $supportsHead = true, array $context = array())
     {
-        $this->client = $client;
+        $this->base = rtrim($base, '/') . '/';
+        $this->supportsHead = $supportsHead;
+        $this->context = $context;
 
-        $parsed = parse_url($base);
-        $this->base = $parsed['scheme'] . '://';
+        // Add in some safe defaults.
+        $this->context += [
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+                'SNI_enabled' => true,
+                'disable_compression' => true,
+            ],
+        ];
 
-        if (isset($parsed['user'])) {
+        if (isset(parse_url($base)['user'])) {
             $this->visibility = AdapterInterface::VISIBILITY_PRIVATE;
-            $this->base .= $parsed['user'];
-
-            if (isset($parsed['pass']) && $parsed['pass'] !== '') {
-                $this->base .= ':' . $parsed['pass'];
-            }
-
-            $this->base .= '@';
         };
-
-        $this->base .= $parsed['host'];
     }
 
     /**
@@ -99,27 +100,11 @@ class HttpAdapter implements AdapterInterface
      */
     public function getMetadata($path)
     {
-        $response = $this->client->head($this->base . '/' . $path);
-
-        if ($mimetype = $response->getHeader('Content-Type')) {
-            list($mimetype) = explode(';', $mimetype, 2);
-            $mimetype = trim($mimetype);
-        } else {
-            // Remove any query strings or fragments.
-            list($path) = explode('#', $path, 2);
-            list($path) = explode('?', $path, 2);
-            $extension = pathinfo($path, PATHINFO_EXTENSION);
-            $mimetype = $extension ? MimeType::detectByFileExtension($extension) : 'text/plain';
+        if (false === $headers = $this->head($path)) {
+            return false;
         }
 
-        return [
-            'type' => 'file',
-            'path' => $path,
-            'timestamp' => (int) strtotime($response->getHeader('Last-Modified')),
-            'size' => (int) $response->getHeader('Content-Length'),
-            'visibility' => $this->visibility,
-            'mimetype' => $mimetype,
-        ];
+        return ['type' => 'file'] + $this->parseMetadata($path, $headers);
     }
 
     /**
@@ -162,15 +147,7 @@ class HttpAdapter implements AdapterInterface
      */
     public function has($path)
     {
-        try {
-            $response = $this->getClient()->head($this->base . '/' . $path);
-        } catch (ClientException $e) {
-            return false;
-        }
-
-        $code = $response->getStatusCode();
-
-        return $code >= 200 && $code < 300;
+        return (bool) $this->head($path);
     }
 
     /**
@@ -186,16 +163,11 @@ class HttpAdapter implements AdapterInterface
      */
     public function read($path)
     {
-        if (! $result = $this->readStream($path)) {
+        if (false === $contents = $this->get($path)) {
             return false;
         }
 
-        $result['contents'] = stream_get_contents($result['stream']);
-
-        fclose($result['stream']);
-        unset($result['stream']);
-
-        return $result;
+        return ['path' => $path, 'contents' => $contents];
     }
 
     /**
@@ -203,9 +175,7 @@ class HttpAdapter implements AdapterInterface
      */
     public function readStream($path)
     {
-        try {
-            $stream = $this->getClient()->get($this->base . '/' . $path)->getBody()->detach();
-        } catch (ClientException $e) {
+        if ( ! $stream = $this->getStream($path)) {
             return false;
         }
 
@@ -228,11 +198,7 @@ class HttpAdapter implements AdapterInterface
      */
     public function setVisibility($path, $visibility)
     {
-        if ($visibility === $this->visibility) {
-            return $this->getVisibility($path);
-        }
-
-        return false;
+        throw new \LogicException('HttpAdapter does not support visibility. Path: ' . $path . ', visibility: ' . $visibility);
     }
 
     /**
@@ -267,17 +233,122 @@ class HttpAdapter implements AdapterInterface
         return false;
     }
 
+    protected function getContext() {
+        $context = stream_context_get_default();
+
+        $options = stream_context_get_options($context);
+
+        $options = array_replace_recursive($options, $this->context);
+
+        stream_context_set_option($context, $options);
+
+        return $context;
+    }
+
     /**
-     * Returns the Guzzle client.
+     * Performs a simple GET request.
      *
-     * @return \GuzzleHttp\ClientInterface
+     * @param string $path
+     *
+     * @return string|false
      */
-    protected function getClient()
-    {
-        if (! isset($this->client)) {
-            $this->client = new Client();
+    protected function get($path) {
+        return file_get_contents($this->base . $path, false, $this->getContext());
+    }
+
+    /**
+     * Returns a URL string.
+     *
+     * @param string $path
+     *
+     * @return resource|false
+     */
+    protected function getStream($path) {
+        return fopen($this->base . $path, 'rb', false, $this->getContext());
+    }
+
+    /**
+     * Performs a HEAD request.
+     *
+     * @param string $path
+     *
+     * @return array|false
+     */
+    protected function head($path) {
+        $default_context = stream_context_get_default();
+
+        $options = stream_context_get_options($default_context);
+
+        $options = array_replace_recursive($options, $this->context);
+
+        if ($this->supportsHead) {
+            $options['http']['method'] = 'HEAD';
         }
 
-        return $this->client;
+        stream_context_set_default(stream_context_create($options));
+
+        $headers = get_headers($this->base . $path, 1);
+
+        stream_context_set_default($default_context);
+
+        if ($headers === false) {
+            return false;
+        }
+
+        if (strpos($headers[0], ' 200') === false) {
+            return false;
+        }
+
+        return array_change_key_case($headers);
+    }
+
+    /**
+     * Parses metadata out of response headers.
+     *
+     * @param string $path
+     * @param array  $headers
+     *
+     * @return array
+     */
+    protected function parseMetadata($path, array $headers) {
+        $metadata = [
+            'path' => $path,
+            'visibility' => $this->visibility,
+            'mimetype' => $this->parseMimeType($path, $headers),
+        ];
+
+        if (isset($headers['last-modified'])) {
+            $last_modified = strtotime($headers['last-modified']);
+
+            if ($last_modified !== false) {
+                $metadata['timestamp'] = $last_modified;
+            }
+        }
+
+        if (isset($headers['content-length']) && is_numeric($headers['content-length'])) {
+            $metadata['size'] = (int) $headers['content-length'];
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * Parses the mimetype out of response headers.
+     *
+     * @param string $path
+     * @param array  $headers
+     */
+    protected function parseMimeType($path, array $headers) {
+        if (isset($headers['content-type'])) {
+            list($mimetype) = explode(';', $headers['content-type'], 2);
+
+            return trim($mimetype);
+        }
+
+        // Remove any query strings or fragments.
+        list($path) = explode('#', $path, 2);
+        list($path) = explode('?', $path, 2);
+
+        return MimeType::detectByFilename($path);
     }
 }
