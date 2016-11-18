@@ -299,11 +299,7 @@ class HttpAdapter implements AdapterInterface
 
         stream_context_set_default($defaults);
 
-        if ($headers === false) {
-            return false;
-        }
-
-        if (strpos($headers[0], ' 200') === false) {
+        if ($headers === false || strpos($headers[0], ' 200') === false) {
             return false;
         }
 
