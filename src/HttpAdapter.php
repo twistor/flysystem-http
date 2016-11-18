@@ -38,11 +38,11 @@ class HttpAdapter implements AdapterInterface
     /**
      * Constructs an HttpAdapter object.
      *
-     * @param string $base         The base URL.
-     * @param bool   $supportsHead Whether the endpoint supports HEAD requests.
-     * @param array  $context      Context options.
+     * @param string $base         The base URL
+     * @param bool   $supportsHead Whether the endpoint supports HEAD requests
+     * @param array  $context      Context options
      */
-    public function __construct($base, $supportsHead = true, array $context = array())
+    public function __construct($base, $supportsHead = true, array $context = [])
     {
         $this->base = $base;
         $this->supportsHead = $supportsHead;
@@ -63,7 +63,7 @@ class HttpAdapter implements AdapterInterface
 
         if (isset(parse_url($base)['user'])) {
             $this->visibility = AdapterInterface::VISIBILITY_PRIVATE;
-        };
+        }
     }
 
     /**
@@ -101,7 +101,7 @@ class HttpAdapter implements AdapterInterface
     /**
      * Returns the base path.
      *
-     * @return string The base path.
+     * @return string The base path
      */
     public function getBase()
     {
@@ -215,7 +215,7 @@ class HttpAdapter implements AdapterInterface
     /**
      * Sets the HTTP context options.
      *
-     * @param array $context The context options.
+     * @param array $context The context options
      */
     public function setContext(array $context)
     {

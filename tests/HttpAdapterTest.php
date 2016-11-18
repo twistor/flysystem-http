@@ -4,12 +4,11 @@ namespace Twistor\Flysystem\Http;
 
 use League\Flysystem\AdapterInterface;
 use League\Flysystem\Config;
-use Twistor\Flysystem\Http\HttpAdapter;
 
 /**
  * @covers \Twistor\Flysystem\Http\HttpAdapter
  */
-class HttpAdapterTest  extends \PHPUnit_Framework_TestCase
+class HttpAdapterTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * The HTTP adapter.
@@ -74,7 +73,6 @@ class HttpAdapterTest  extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->adapter->getMetadata('foo/404'));
 
         $this->assertFalse($this->adapter->getMetadata('foo'));
-
     }
 
     public function testGetMimetype()
