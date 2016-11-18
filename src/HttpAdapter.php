@@ -48,7 +48,9 @@ class HttpAdapter implements AdapterInterface
         $this->supportsHead = $supportsHead;
         $this->context = $context;
 
-        // Add in some safe defaults.
+        // Add in some safe defaults for SSL/TLS. Don't know why PHPUnit/Xdebug
+        // messes this up.
+        // @codeCoverageIgnoreStart
         $this->context += [
             'ssl' => [
                 'verify_peer' => true,
@@ -57,6 +59,7 @@ class HttpAdapter implements AdapterInterface
                 'disable_compression' => true,
             ],
         ];
+        // @codeCoverageIgnoreEnd
 
         if (isset(parse_url($base)['user'])) {
             $this->visibility = AdapterInterface::VISIBILITY_PRIVATE;
@@ -173,11 +176,14 @@ class HttpAdapter implements AdapterInterface
      */
     public function read($path)
     {
-        if (false === $contents = $this->get($path)) {
+        $context = stream_context_create($this->context);
+        $contents = file_get_contents($this->buildUrl($path), false, $context);
+
+        if ($contents === false) {
             return false;
         }
 
-        return ['path' => $path, 'contents' => $contents];
+        return compact('path', 'contents');
     }
 
     /**
@@ -185,7 +191,10 @@ class HttpAdapter implements AdapterInterface
      */
     public function readStream($path)
     {
-        if ( ! $stream = $this->getStream($path)) {
+        $context = stream_context_create($this->context);
+        $stream = fopen($this->buildUrl($path), 'rb', false, $context);
+
+        if ($stream === false) {
             return false;
         }
 
@@ -262,47 +271,10 @@ class HttpAdapter implements AdapterInterface
      */
     protected function buildUrl($path)
     {
-        $path = str_replace('%2F', '/', rawurlencode($path));
+        $path = str_replace('%2F', '/', $path);
+        $path = str_replace(' ', '%20', $path);
 
         return rtrim($this->base, '/') . '/' . $path;
-    }
-
-    /**
-     * Returns the context used for HTTP requests.
-     *
-     * @return resource
-     */
-    protected function getContext()
-    {
-        $context = stream_context_get_default();
-
-        stream_context_set_option($context, $this->context);
-
-        return $context;
-    }
-
-    /**
-     * Performs a simple GET request.
-     *
-     * @param string $path
-     *
-     * @return string|false
-     */
-    protected function get($path)
-    {
-        return file_get_contents($this->buildUrl($path), false, $this->getContext());
-    }
-
-    /**
-     * Returns a URL string.
-     *
-     * @param string $path
-     *
-     * @return resource|false
-     */
-    protected function getStream($path)
-    {
-        return fopen($this->buildUrl($path), 'rb', false, $this->getContext());
     }
 
     /**
@@ -314,21 +286,18 @@ class HttpAdapter implements AdapterInterface
      */
     protected function head($path)
     {
-        $default_context = stream_context_get_default();
-
-        $options = stream_context_get_options($default_context);
-
-        $options = array_replace_recursive($options, $this->context);
+        $defaults = stream_context_get_options(stream_context_get_default());
+        $options = $this->context;
 
         if ($this->supportsHead) {
             $options['http']['method'] = 'HEAD';
         }
 
-        stream_context_set_default(stream_context_create($options));
+        stream_context_set_default($options);
 
         $headers = get_headers($this->buildUrl($path), 1);
 
-        stream_context_set_default($default_context);
+        stream_context_set_default($defaults);
 
         if ($headers === false) {
             return false;
