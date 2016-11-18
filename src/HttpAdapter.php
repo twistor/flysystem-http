@@ -44,7 +44,7 @@ class HttpAdapter implements AdapterInterface
      */
     public function __construct($base, $supportsHead = true, array $context = array())
     {
-        $this->base = rtrim($base, '/') . '/';
+        $this->base = $base;
         $this->supportsHead = $supportsHead;
         $this->context = $context;
 
@@ -93,6 +93,15 @@ class HttpAdapter implements AdapterInterface
     public function deleteDir($path)
     {
         return false;
+    }
+
+    /**
+     * Returns the base path.
+     *
+     * @return string The base path.
+     */
+    public function getBase() {
+        return $this->base;
     }
 
     /**
@@ -194,6 +203,15 @@ class HttpAdapter implements AdapterInterface
     }
 
     /**
+     * Sets the HTTP context options.
+     *
+     * @param array $context The context options.
+     */
+    public function setContext(array $context) {
+        $this->context = $context;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function setVisibility($path, $visibility)
@@ -233,14 +251,26 @@ class HttpAdapter implements AdapterInterface
         return false;
     }
 
+    /**
+     * Returns the URL to perform an HTTP request.
+     *
+     * @param string $path
+     *
+     * @return string
+     */
+    protected function buildUrl($path) {
+        return rtrim($this->base, '/') . '/' . $path;
+    }
+
+    /**
+     * Returns the context used for HTTP requests.
+     *
+     * @return resource
+     */
     protected function getContext() {
         $context = stream_context_get_default();
 
-        $options = stream_context_get_options($context);
-
-        $options = array_replace_recursive($options, $this->context);
-
-        stream_context_set_option($context, $options);
+        stream_context_set_option($context, $this->context);
 
         return $context;
     }
@@ -253,7 +283,7 @@ class HttpAdapter implements AdapterInterface
      * @return string|false
      */
     protected function get($path) {
-        return file_get_contents($this->base . $path, false, $this->getContext());
+        return file_get_contents($this->buildUrl($path), false, $this->getContext());
     }
 
     /**
@@ -264,7 +294,7 @@ class HttpAdapter implements AdapterInterface
      * @return resource|false
      */
     protected function getStream($path) {
-        return fopen($this->base . $path, 'rb', false, $this->getContext());
+        return fopen($this->buildUrl($path), 'rb', false, $this->getContext());
     }
 
     /**
@@ -287,7 +317,7 @@ class HttpAdapter implements AdapterInterface
 
         stream_context_set_default(stream_context_create($options));
 
-        $headers = get_headers($this->base . $path, 1);
+        $headers = get_headers($this->buildUrl($path), 1);
 
         stream_context_set_default($default_context);
 
@@ -337,6 +367,8 @@ class HttpAdapter implements AdapterInterface
      *
      * @param string $path
      * @param array  $headers
+     *
+     * @return string
      */
     protected function parseMimeType($path, array $headers) {
         if (isset($headers['content-type'])) {
