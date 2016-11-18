@@ -23,7 +23,7 @@
     },
     "autoload": {
         "psr-4": {
-            "League\\Flysystem\\Http\\": "src/"
+            "Twistor\\Flysystem\\Http\\": "src/"
         }
     },
     "config": {
