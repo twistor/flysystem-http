@@ -259,6 +259,8 @@ class HttpAdapter implements AdapterInterface
      * @return string
      */
     protected function buildUrl($path) {
+        $path = str_replace('%2F', '/', rawurlencode($path));
+
         return rtrim($this->base, '/') . '/' . $path;
     }
 
