@@ -38,9 +38,9 @@ class HttpAdapter implements AdapterInterface
     /**
      * Constructs an HttpAdapter object.
      *
-     * @param string $base   The base URL.
-     * @param bool   $supportsHead
-     * @param array  $context
+     * @param string $base         The base URL.
+     * @param bool   $supportsHead Whether the endpoint supports HEAD requests.
+     * @param array  $context      Context options.
      */
     public function __construct($base, $supportsHead = true, array $context = array())
     {
