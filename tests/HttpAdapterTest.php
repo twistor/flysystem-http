@@ -92,8 +92,10 @@ class HttpAdapterTest extends \PHPUnit_Framework_TestCase
     public function testGetTimestamp()
     {
         $result = $this->adapter->getTimestamp('foo/pass');
-
         $this->assertSame(1445412480, $result['timestamp']);
+
+        $result = $this->adapter->getTimestamp('foo/notime');
+        $this->assertFalse(isset($result['timestamp']));
     }
 
     public function testGetVisibility()
@@ -213,6 +215,14 @@ function get_headers($path)
             0 => 'HTTP/1.0 200 OK',
             'Content-Length' => '42',
             'Last-Modified' => 'Wed, 21 Oct 2015 07:28:00 GMT',
+        ];
+    }
+
+    if (strpos($path, 'notime') !== false) {
+        return [
+            0 => 'HTTP/1.0 200 OK',
+            'Content-Type' => 'text/html; charset=utf-8',
+            'Content-Length' => '42',
         ];
     }
 

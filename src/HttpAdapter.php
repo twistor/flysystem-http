@@ -307,6 +307,22 @@ class HttpAdapter implements AdapterInterface
     }
 
     /**
+     * Parses the timestamp out of headers.
+     *
+     * @param array $headers
+     *
+     * @return int|false
+     */
+    protected function parseTimestamp(array $headers)
+    {
+        if (isset($headers['last-modified'])) {
+            return strtotime($headers['last-modified']);
+        }
+
+        return false;
+    }
+
+    /**
      * Parses metadata out of response headers.
      *
      * @param string $path
@@ -322,12 +338,8 @@ class HttpAdapter implements AdapterInterface
             'mimetype' => $this->parseMimeType($path, $headers),
         ];
 
-        if (isset($headers['last-modified'])) {
-            $last_modified = strtotime($headers['last-modified']);
-
-            if ($last_modified !== false) {
-                $metadata['timestamp'] = $last_modified;
-            }
+        if (false !== $timestamp = $this->parseTimestamp($headers)) {
+            $metadata['timestamp'] = $timestamp;
         }
 
         if (isset($headers['content-length']) && is_numeric($headers['content-length'])) {
